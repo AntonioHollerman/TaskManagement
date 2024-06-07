@@ -106,6 +106,67 @@ def insert_account(name: str):
     conn.commit()
 
 
+def get_all_task_items() -> List[TaskItem]:
+    cur.execute("""
+SELECT t.name, t.group_name, items FROM tasks AS t 
+INNER JOIN check_lists cl
+    on cl.id = t.cl_id;""")
+    task_items: List[TaskItem] = []
+
+    for name, group_name, items in cur.fetchall():
+        for item in items.split(", "):
+            task_items.append(TaskItem(
+                name,
+                group_name,
+                item
+            ))
+
+    return task_items
+
+
+def get_all_completed_task_items() -> List[TaskItem]:
+    cur.execute("""
+SELECT t.name, t.group_name, tc.item_name FROM tasks_completed as tc
+INNER JOIN tasks t
+    on t.id = tc.task_id""")
+    task_items: List[TaskItem] = []
+
+    for name, group_name, item in cur.fetchall():
+        task_items.append(TaskItem(
+            name,
+            group_name,
+            item
+        ))
+
+    return task_items
+
+
+def get_all_not_completed_task_items() -> List[TaskItem]:
+    all_tasks = set(get_all_task_items())
+    completed_tasks = set(get_all_completed_task_items())
+    return list(all_tasks.difference(completed_tasks))
+
+
+def get_all_completed_tasks_by_name(name: str) -> List[TaskItem]:
+    cur.execute(f"""
+SELECT t.name, t.group_name, tc.item_name FROM tasks_completed as tc
+INNER JOIN tasks t
+    on t.id = tc.task_id
+INNER JOIN accounts a 
+    on tc.acc_id = a.id
+WHERE a.name = '{name}'""")
+    tasks_completed: List[TaskItem] = []
+
+    for task_name, group_name, item in cur.fetchall():
+        tasks_completed.append(TaskItem(
+            task_name,
+            group_name,
+            item
+        ))
+
+    return tasks_completed
+
+
 def insert_cl(name: str, items: list):
     cur.execute(
         "INSERT INTO check_lists (name, items) "

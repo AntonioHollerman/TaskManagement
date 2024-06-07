@@ -26,3 +26,9 @@ TaskCompletedRow = namedtuple("TaskCompletedRow", [
     "item_name",
     "date_completed"
 ])
+
+TaskItem = namedtuple("TaskItem", [
+    "task_name",
+    "group_name",
+    "item_name"
+])
