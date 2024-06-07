@@ -96,3 +96,39 @@ def get_all_completed_tasks() -> List[TaskCompletedRow]:
             )
         ))
     return completed
+
+
+def insert_account(name: str):
+    cur.execute(
+        "INSERT INTO accounts (name) "
+        f"VALUES ('{name}')"
+    )
+    conn.commit()
+
+
+def insert_cl(name: str, items: list):
+    cur.execute(
+        "INSERT INTO check_lists (name, items) "
+        f"VALUES ('{name}', '{", ".join(items)}')"
+    )
+    conn.commit()
+
+
+def insert_task(cl_id: int, name: str, group_name: str, bugged: bool):
+    cur.execute(
+        "INSERT INTO tasks (cl_id, name, group_name, bugged) "
+        f"VALUES ({cl_id}, '{name}', '{group_name}', '{bugged}')"
+    )
+    conn.commit()
+
+
+def insert_completed_task(acc_id: int, task_id: int, item_name: str, date_completed: datetime.date):
+    date_formatted = f"{date_completed.month:02d}/{date_completed.day:02d}/{date_completed.year}"
+    cur.execute(
+        "INSERT INTO tasks_completed (acc_id, task_id, item_name, date_completed) "
+        f"VALUES ({acc_id}, {task_id}, '{item_name}', '{date_formatted}')"
+    )
+    conn.commit()
+
+
+
