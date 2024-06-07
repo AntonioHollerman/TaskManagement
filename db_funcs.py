@@ -98,14 +98,6 @@ def get_all_completed_tasks() -> List[TaskCompletedRow]:
     return completed
 
 
-def insert_account(name: str):
-    cur.execute(
-        "INSERT INTO accounts (name) "
-        f"VALUES ('{name}')"
-    )
-    conn.commit()
-
-
 def get_all_task_items() -> List[TaskItem]:
     cur.execute("""
 SELECT t.name, t.group_name, items FROM tasks AS t 
@@ -167,6 +159,14 @@ WHERE a.name = '{name}'""")
     return tasks_completed
 
 
+def insert_account(name: str):
+    cur.execute(
+        "INSERT INTO accounts (name) "
+        f"VALUES ('{name}')"
+    )
+    conn.commit()
+
+
 def insert_cl(name: str, items: list):
     cur.execute(
         "INSERT INTO check_lists (name, items) "
@@ -192,4 +192,27 @@ def insert_completed_task(acc_id: int, task_id: int, item_name: str, date_comple
     conn.commit()
 
 
+def delete_acc(acc_id: int):
+    cur.execute(f"""
+DELETE FROM accounts
+WHERE id = {acc_id}""")
+    conn.commit()
 
+
+def delete_task(task_id: int):
+    cur.execute(f"""
+DELETE FROM tasks
+WHERE id = {task_id}""")
+    conn.commit()
+
+
+def delete_group(group_name: str):
+    cur.execute(f"""
+DELETE FROM tasks
+WHERE group_name = '{group_name}' """)
+
+
+def delete_completed_task_item(task_id: int, item_name: str):
+    cur.execute(f"""
+DELETE FROM tasks_completed
+WHERE task_id = {task_id} AND item_name = '{item_name}'""")
