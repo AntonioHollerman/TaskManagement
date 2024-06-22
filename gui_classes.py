@@ -24,7 +24,12 @@ class SignInFrame(SubFrame):
         # Making drop down for accounts
         self.acc_selected = tk.StringVar()
         accounts = get_all_accounts()
-        self.acc_dropdown = ttk.Combobox(self, textvariable=self.acc_selected, values=[acc.name for acc in accounts])
+        self.acc_selected.set(accounts[0].name if len(accounts) != 0 else "")
+
+        self.acc_dropdown = ttk.Combobox(self,
+                                         textvariable=self.acc_selected,
+                                         state="readonly",
+                                         values=[acc.name for acc in accounts])
         self.acc_dropdown.grid(row=1, column=1, sticky=tk.W)
 
         # Bottom buttons
@@ -59,9 +64,14 @@ class NewAccountFrane(SubFrame):
 
         self.acc_name = tk.StringVar()
         self.name_entry = ttk.Entry(self, textvariable=self.acc_name)
-        self.name_entry.grid(row=1, column=1, sticky="ew")
+        self.name_entry.grid(row=1, column=1, sticky=tk.EW)
 
         # Create Buttons
+        self.back_button = ttk.Button(self, text="<-", command=self.back)
+        self.back_button.grid(row=2, column=0, sticky=tk.W)
+
+        self.add_button = ttk.Button(self, text="Add", command=self.add_acc)
+        self.add_button.grid(row=2, column=1, sticky=tk.E)
 
     def back(self):
         pass
@@ -73,6 +83,75 @@ class NewAccountFrane(SubFrame):
 class TasksFrame(SubFrame):
     def __init__(self, master):
         super().__init__(master)
+
+        # Creating sub frames
+        self.top_frame = ttk.Frame(self)
+
+        self.mid_frame = ttk.Frame(self)
+        self.content_frame = ttk.Frame(self.mid_frame)
+        self.scroll_frame = ttk.Frame(self.mid_frame)
+
+        self.bottom_frame = ttk.Frame(self)
+
+        # Packing the sub frames
+        self.top_frame.pack(fill=tk.X, expand=True)
+        ttk.Separator(self).pack(fill=tk.X, expand=False)
+
+        self.mid_frame.pack(fill=tk.BOTH, expand=True)
+        self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.scroll_frame.pack(side=tk.RIGHT, fill=tk.Y, expand=False)
+        ttk.Separator(self).pack(fill=tk.X, expand=False)
+
+        self.bottom_frame.pack(fill=tk.X, expand=True)
+
+        # Populate Top Frame
+        ttk.Label(self.top_frame, text="Tasks", anchor=tk.CENTER).grid(row=0, column=0, columnspan=2, sticky="ew")
+        ttk.Label(self.top_frame, text="Filter: ", anchor=tk.E).grid(row=1, column=0, sticky="e")
+
+        self.filter = tk.StringVar()
+        self.filter.set("Default")
+        self.filter.trace("w", self.change_filter)
+
+        self.filter_dropdown = ttk.Combobox(self.top_frame,
+                                            textvariable=self.filter,
+                                            state="readonly",
+                                            values=["Default", "Bugged", "Uncompleted", "I Completed"])
+        self.filter_dropdown.grid(row=1, column=1, sticky="w")
+
+        # Populate Mid Frame
+
+        # Populate Bottom Frame
+        self.add_group_button = ttk.Button(self.bottom_frame, text="New Group", command=self.add_group)
+        self.add_group_button.grid(row=0, column=0, sticky=tk.W)
+
+        self.group_name = tk.StringVar()
+        self.group_name.set("Group Name")
+
+        self.group_entry = ttk.Entry(self.bottom_frame, textvariable=self.group_name)
+        self.group_entry.grid(row=0, column=1, sticky=tk.E)
+
+    @staticmethod
+    def create_group_frame():
+        pass
+
+    @staticmethod
+    def create_task_frame():
+        pass
+
+    def change_filter(self):
+        pass
+
+    def delete_group(self):
+        pass
+
+    def delete_task(self):
+        pass
+
+    def add_task(self):
+        pass
+
+    def add_group(self):
+        pass
 
 
 class NewTaskFrame(SubFrame):
