@@ -20,6 +20,14 @@ TaskRow = namedtuple("TaskRow", [
     "bugged"
 ])
 
+FilteredRow = namedtuple("FilteredRow", [
+    "id",
+    "name",
+    "group_name",
+    "bugged",
+    "items_filtered"
+])
+
 TaskCompletedRow = namedtuple("TaskCompletedRow", [
     "acc_id",
     "task_id",

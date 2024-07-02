@@ -64,8 +64,33 @@ def get_all_check_lists() -> List[CheckListRow]:
     return check_lists
 
 
+def get_check_list(cl_id: int) -> CheckListRow:
+    cur.execute(f"SELECT * FROM check_lists WHERE id = {cl_id}")
+    _, name, items = cur.fetchone()
+    return CheckListRow(
+            cl_id,
+            name,
+            items.split(", ")
+        )
+
+
 def get_all_tasks() -> List[TaskRow]:
     cur.execute("SELECT * FROM tasks")
+
+    tasks: List[TaskRow] = []
+    for task_id, cl_id, name, group_name, bugged in cur.fetchall():
+        tasks.append(TaskRow(
+            int(task_id),
+            int(cl_id),
+            name,
+            group_name,
+            "true" == bugged.lower()
+        ))
+    return tasks
+
+
+def get_all_tasks_by_group(group_name: str) -> List[TaskRow]:
+    cur.execute(f"SELECT * FROM tasks WHERE group_name = '{group_name}'")
 
     tasks: List[TaskRow] = []
     for task_id, cl_id, name, group_name, bugged in cur.fetchall():
@@ -157,6 +182,15 @@ WHERE a.name = '{name}'""")
         ))
 
     return tasks_completed
+
+
+def get_all_group_names() -> List[str]:
+    cur.execute("SELECT DISTINCT group_name FROM tasks")
+    return [row[0] for row in cur.fetchall()]
+
+
+def task_item_completed(task_item: TaskItem) -> bool:
+    return task_item in get_all_completed_tasks()
 
 
 def insert_account(name: str):

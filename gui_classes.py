@@ -1,10 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
 from db_funcs import *
+import customtkinter as ctk
 
 
-class MasterWindow(tk.Tk):
-    pass
+class MasterWindow(ctk.ctk_tk):
+    def __init__(self):
+        ctk.set_appearance_mode("light")
 
 
 class SubFrame(ttk.Frame):
@@ -86,11 +88,7 @@ class TasksFrame(SubFrame):
 
         # Creating sub frames
         self.top_frame = ttk.Frame(self)
-
-        self.mid_frame = ttk.Frame(self)
-        self.content_frame = ttk.Frame(self.mid_frame)
-        self.scroll_frame = ttk.Frame(self.mid_frame)
-
+        self.mid_frame = ctk.CTkScrollableFrame(self)
         self.bottom_frame = ttk.Frame(self)
 
         # Packing the sub frames
@@ -98,8 +96,6 @@ class TasksFrame(SubFrame):
         ttk.Separator(self).pack(fill=tk.X, expand=False)
 
         self.mid_frame.pack(fill=tk.BOTH, expand=True)
-        self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.scroll_frame.pack(side=tk.RIGHT, fill=tk.Y, expand=False)
         ttk.Separator(self).pack(fill=tk.X, expand=False)
 
         self.bottom_frame.pack(fill=tk.X, expand=True)
@@ -119,6 +115,15 @@ class TasksFrame(SubFrame):
         self.filter_dropdown.grid(row=1, column=1, sticky="w")
 
         # Populate Mid Frame
+        self.item_vars: List[tk.StringVar] = []
+        self.bugged_vars: List[tk.StringVar] = []
+        self.check_boxes: List[ttk.Checkbutton] = []
+        self.bugged_check_boxes: List[ttk.Checkbutton] = []
+        self.delete_buttons: List[ttk.Button] = []
+        self.group_delete_buttons: List[ttk.Button] = []
+
+        for group_name in get_all_group_names():
+            self.create_group_frame(self.mid_frame, group_name).pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
         # Populate Bottom Frame
         self.add_group_button = ttk.Button(self.bottom_frame, text="New Group", command=self.add_group)
@@ -130,22 +135,102 @@ class TasksFrame(SubFrame):
         self.group_entry = ttk.Entry(self.bottom_frame, textvariable=self.group_name)
         self.group_entry.grid(row=0, column=1, sticky=tk.E)
 
-    @staticmethod
-    def create_group_frame():
+    def filter_tasks(self, tasks: List[TaskRow]) -> List[FilteredRow]:
         pass
 
+    def create_group_frame(self, parent: ctk.CTkScrollableFrame, group_name: str) -> ttk.Frame:
+        # Filter tasks but setting
+        filtered_tasks: List[FilteredRow] = self.filter_tasks(get_all_tasks_by_group(group_name))
+        if len(filtered_tasks) == 0:
+            return ttk.Frame(parent)
+
+        # Creating master Frame
+        group_frame = ttk.Frame(parent)
+        top_frame = ttk.Frame(group_frame)
+        bottom_frame = ttk.Frame(group_frame)
+
+        # Packing Frames
+        top_frame.pack(fill=tk.X, expand=True)
+        bottom_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Populate Top Frame
+        ttk.Label(top_frame, text=group_name, anchor=tk.CENTER).grid(row=0, column=0, sticky=tk.EW)
+        delete_button = ttk.Button(top_frame, text="DELETE",
+                                   command=TasksFrame.delete_group_frame(group_frame, group_name))
+        delete_button.grid(row=0, column=1, sticky=tk.W)
+
+        # Populate Bottom Frame
+        for task in filtered_tasks:
+            self.create_task_frame(bottom_frame, task).pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+        return group_frame
+
+    def create_task_frame(self, parent: ttk.Frame, task: FilteredRow) -> ttk.Frame:
+        # Frame to be returned
+        task_frame = ttk.Frame(parent)
+
+        # Creating task delete button
+        delete_button = ttk.Button(task_frame, text="X", command=TasksFrame.delete_task_frame(task_frame, task.id))
+        delete_button.grid(row=0, column=0, sticky="ne")
+        self.delete_buttons.append(delete_button)
+
+        # Creating Label for task
+        task_label = ttk.Label(task_frame, text=task.name, anchor=tk.CENTER)
+        task_label.grid(row=0, column=1, sticky="ew")
+
+        # Creating bugged tab
+        bugged_var = tk.StringVar()
+        bugged_var.set("Bugged" if task.bugged else "Not Bugged")
+        bugged_var.trace("w", TasksFrame.change_bug_state(task.id, bugged_var))
+        self.bugged_vars.append(bugged_var)
+
+        bugged_box = ttk.Checkbutton(task_frame, variable=bugged_var, text="Bugged", onvalue="Bugged",
+                                     offvalue="Not Bugged")
+        bugged_box.grid(row=1, column=1, sticky="nw")
+        self.bugged_check_boxes.append(bugged_box)
+
+        # Looping through items for each task
+        for index, item_name in enumerate(get_check_list(task.items_filtered)):
+            # Tracks if item is checked or un checked
+            var = tk.StringVar()
+            var.set("Completed" if task_item_completed(TaskItem(task.name, task.group_name, item_name))
+                    else "Not Completed")
+            var.trace("w", TasksFrame.box_value_changed(var, task.id, item_name))
+            self.item_vars.append(var)
+
+            # Displays check box
+            check_box = ttk.Checkbutton(task_frame, variable=var, text=item_name, onvalue="Completed",
+                                        offvalue="Not Completed")
+            check_box.grid(row=2+index, column=1, sticky="nw")
+            self.check_boxes.append(check_box)
+
+        return task_frame
+
     @staticmethod
-    def create_task_frame():
-        pass
+    def box_value_changed(box_status: tk.StringVar, task_id: int, item_name):
+        def to_return():
+            pass
+        return to_return
 
     def change_filter(self):
         pass
 
-    def delete_group(self):
-        pass
+    @staticmethod
+    def delete_group_frame(group_frame: ttk.Frame, group_name):
+        def to_return():
+            pass
+        return to_return
 
-    def delete_task(self):
-        pass
+    @staticmethod
+    def delete_task_frame(task_frame: ttk.Frame, task_id):
+        def to_return():
+            pass
+        return to_return
+
+    @staticmethod
+    def change_bug_state(task_id: int, bug_state: tk.StringVar):
+        def to_return():
+            pass
+        return to_return
 
     def add_task(self):
         pass
