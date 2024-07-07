@@ -164,6 +164,27 @@ def get_all_not_completed_task_items() -> List[TaskItem]:
     return list(all_tasks.difference(completed_tasks))
 
 
+def filter_by_acc_and_group(group_name: str, acc_id: int) -> List[TaskRow]:
+    cur.execute(f"""
+SELECT t.name, t.group_name, tc.item_name FROM tasks_completed as tc
+INNER JOIN tasks t
+    on t.id = tc.task_id
+INNER JOIN accounts a 
+    on tc.acc_id = a.id
+WHERE t.group_name = ? AND a.id = ?""", (group_name, acc_id))
+
+    tasks: List[TaskRow] = []
+    for task_id, cl_id, name, group_name, bugged in cur.fetchall():
+        tasks.append(TaskRow(
+            int(task_id),
+            int(cl_id),
+            name,
+            group_name,
+            "true" == bugged.lower()
+        ))
+    return tasks
+
+
 def get_all_completed_tasks_by_name(name: str) -> List[TaskItem]:
     cur.execute(f"""
 SELECT t.name, t.group_name, tc.item_name FROM tasks_completed as tc

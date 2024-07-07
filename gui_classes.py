@@ -3,16 +3,59 @@ from tkinter import ttk
 from db_funcs import *
 import customtkinter as ctk
 
+# Frame constant values
+SIGN_IN_FRAME = "sign in frame"
+NEW_ACCOUNT_FRAME = "new account frame"
+TASKS_FRAME = "tasks frame"
+NEW_TASK_FRAME = "new task frame"
+NEW_CHECKLIST_FRAME = "new checklist frame"
 
-class MasterWindow(ctk.ctk_tk):
-    def __init__(self):
+
+class MasterWindow(ctk.CTk):
+    def __init__(self, **kwargs):
+        # Applying default parameters
+        super().__init__(**kwargs)
         ctk.set_appearance_mode("light")
+        self.current_acc = None
+        self.current_frame = SIGN_IN_FRAME
+
+        # Initializing frame
+        self.current_frame: SubFrame = SignInFrame(self)
+
+    def swap_frames(self, to_frame, **params):
+        if to_frame == SIGN_IN_FRAME:
+            self.current_frame.destroy()
+            self.current_frame = SignInFrame(self)
+            self.current_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        elif to_frame == NEW_ACCOUNT_FRAME:
+            self.current_frame.destroy()
+            self.current_frame = NewAccountFrame(self)
+            self.current_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        elif to_frame == TASKS_FRAME:
+            self.current_frame.destroy()
+            self.current_frame = TasksFrame(self)
+            self.current_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        elif to_frame == NEW_TASK_FRAME:
+            self.current_frame.destroy()
+            self.current_frame = NewTaskFrame(self)
+            self.current_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        elif to_frame == NEW_CHECKLIST_FRAME:
+            self.current_frame.destroy()
+            self.current_frame = NewCheckListFrame(self)
+            self.current_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        else:
+            raise RuntimeError("Incorrect 'to_frame' param provided")
 
 
 class SubFrame(ttk.Frame):
     def __init__(self, master: MasterWindow):
         super().__init__(master)
-        self.master = master
+        self.master: MasterWindow = master
+
+    def refresh(self, master: MasterWindow, **params):
+        current_sub_class = type(self)
+        self.destroy()
+        return current_sub_class(master, params)
 
 
 class SignInFrame(SubFrame):
@@ -48,13 +91,14 @@ class SignInFrame(SubFrame):
         self.columnconfigure(2, weight=1)
 
     def add_acc(self):
-        pass
+        self.master.swap_frames(NEW_ACCOUNT_FRAME)
 
     def select_acc(self):
-        pass
+        self.master.current_acc = self.acc_selected.get()
+        self.master.swap_frames(TASKS_FRAME)
 
 
-class NewAccountFrane(SubFrame):
+class NewAccountFrame(SubFrame):
     def __init__(self, master):
         super().__init__(master)
 
@@ -76,14 +120,17 @@ class NewAccountFrane(SubFrame):
         self.add_button.grid(row=2, column=1, sticky=tk.E)
 
     def back(self):
-        pass
+        self.master.swap_frames(SIGN_IN_FRAME)
 
     def add_acc(self):
-        pass
+        if self.acc_name.get() not in [acc.name for acc in get_all_accounts()]:
+            insert_account(self.acc_name.get())
 
 
 class TasksFrame(SubFrame):
-    def __init__(self, master):
+    def __init__(self, master, filter_="Default"):
+        filter_modes = ["Default", "Bugged", "Uncompleted", "I Completed"]
+        assert filter_ in filter_modes
         super().__init__(master)
 
         # Creating sub frames
@@ -105,13 +152,13 @@ class TasksFrame(SubFrame):
         ttk.Label(self.top_frame, text="Filter: ", anchor=tk.E).grid(row=1, column=0, sticky="e")
 
         self.filter = tk.StringVar()
-        self.filter.set("Default")
+        self.filter.set(filter_)
         self.filter.trace("w", self.change_filter)
 
         self.filter_dropdown = ttk.Combobox(self.top_frame,
                                             textvariable=self.filter,
                                             state="readonly",
-                                            values=["Default", "Bugged", "Uncompleted", "I Completed"])
+                                            values=filter_modes)
         self.filter_dropdown.grid(row=1, column=1, sticky="w")
 
         # Populate Mid Frame
@@ -135,12 +182,35 @@ class TasksFrame(SubFrame):
         self.group_entry = ttk.Entry(self.bottom_frame, textvariable=self.group_name)
         self.group_entry.grid(row=0, column=1, sticky=tk.E)
 
-    def filter_tasks(self, tasks: List[TaskRow]) -> List[FilteredRow]:
-        pass
+    def filter_tasks(self, group_name: str) -> List[FilteredRow]:
+        # Initialize values
+        filtered_tasks: List[FilteredRow] = []
+        mode = self.filter.get()
+
+        # Helper functions
+        def convert(task: TaskRow) -> FilteredRow:
+            pass
+
+        def filter_items(items: List[str]) -> List[str]:
+            pass
+
+        # Different modes -> ["Default", "Bugged", "Uncompleted", "I Completed"]
+        if mode == "Default":
+            pass
+        elif mode == "Bugged":
+            pass
+        elif mode == "Uncompleted":
+            pass
+        elif mode == "I Completed":
+            pass
+        else:
+            self.master.destroy()
+            raise RuntimeError("Invalid mode passed")
+        return filtered_tasks
 
     def create_group_frame(self, parent: ctk.CTkScrollableFrame, group_name: str) -> ttk.Frame:
         # Filter tasks but setting
-        filtered_tasks: List[FilteredRow] = self.filter_tasks(get_all_tasks_by_group(group_name))
+        filtered_tasks: List[FilteredRow] = self.filter_tasks(group_name)
         if len(filtered_tasks) == 0:
             return ttk.Frame(parent)
 
