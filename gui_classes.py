@@ -189,18 +189,23 @@ class TasksFrame(SubFrame):
 
         # Helper functions
         def convert(task: TaskRow) -> FilteredRow:
-            pass
-
-        def filter_items(items: List[str]) -> List[str]:
-            pass
+            return FilteredRow(
+                task.id,
+                task.name,
+                task.group_name,
+                task.bugged,
+                get_check_list(task.id).items
+            )
 
         # Different modes -> ["Default", "Bugged", "Uncompleted", "I Completed"]
         if mode == "Default":
-            pass
+            filtered_tasks = [convert(task) for task in get_all_tasks_by_group(group_name)]
         elif mode == "Bugged":
-            pass
+            filtered_tasks = [convert(task) for task in get_all_tasks_by_group_and_bugged(group_name)]
         elif mode == "Uncompleted":
-            pass
+            for task in get_all_tasks_by_group(group_name):
+                task_converted = convert(task)
+
         elif mode == "I Completed":
             pass
         else:

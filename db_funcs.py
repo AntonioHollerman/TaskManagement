@@ -104,6 +104,22 @@ def get_all_tasks_by_group(group_name: str) -> List[TaskRow]:
     return tasks
 
 
+def get_all_tasks_by_group_and_bugged(group_name: str) -> List[TaskRow]:
+    cur.execute(f"SELECT * FROM tasks "
+                f"WHERE group_name = '?' AND bugged = 'True'", (group_name,))
+
+    tasks: List[TaskRow] = []
+    for task_id, cl_id, name, group_name, bugged in cur.fetchall():
+        tasks.append(TaskRow(
+            int(task_id),
+            int(cl_id),
+            name,
+            group_name,
+            "true" == bugged.lower()
+        ))
+    return tasks
+
+
 def get_all_completed_tasks() -> List[TaskCompletedRow]:
     cur.execute("SELECT * FROM tasks_completed")
 
@@ -121,6 +137,10 @@ def get_all_completed_tasks() -> List[TaskCompletedRow]:
             )
         ))
     return completed
+
+
+def get_all_completed_tasks_by_acc(acc_id):
+    pass
 
 
 def get_all_task_items() -> List[TaskItem]:
