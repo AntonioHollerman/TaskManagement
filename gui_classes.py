@@ -17,6 +17,7 @@ class MasterWindow(ctk.CTk):
         super().__init__(**kwargs)
         ctk.set_appearance_mode("light")
         self.current_acc = None
+        self.acc_id = -1
         self.current_frame = SIGN_IN_FRAME
 
         # Initializing frame
@@ -207,7 +208,12 @@ class TasksFrame(SubFrame):
                 task_converted = convert(task)
 
         elif mode == "I Completed":
-            pass
+            task_ids_dict = dict()
+            for task_completed in filter_by_acc_group_and_completed(group_name, self.master.acc_id):
+                if task_completed.task_id in task_ids_dict.keys():
+                    task_ids_dict[task_completed.acc_id].append(task_completed.item_name)
+                else:
+                    task_ids_dict[task_completed.acc_id] = [task_completed.item_name]
         else:
             self.master.destroy()
             raise RuntimeError("Invalid mode passed")
