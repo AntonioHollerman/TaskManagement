@@ -128,7 +128,7 @@ def get_all_tasks_by_group(group_name: str) -> List[TaskRow]:
 
 def get_all_tasks_by_group_and_bugged(group_name: str) -> List[TaskRow]:
     cur.execute(f"SELECT * FROM tasks "
-                f"WHERE group_name = '?' AND bugged = 'True'", (group_name,))
+                f"WHERE group_name = '?' AND bugged = 'true'", (group_name,))
 
     tasks: List[TaskRow] = []
     for task_id, cl_id, name, group_name, bugged in cur.fetchall():
@@ -140,25 +140,6 @@ def get_all_tasks_by_group_and_bugged(group_name: str) -> List[TaskRow]:
             "true" == bugged.lower()
         ))
     return tasks
-
-
-def get_all_completed_tasks() -> List[TaskCompletedRow]:
-    cur.execute("SELECT * FROM tasks_completed")
-
-    completed: List[TaskCompletedRow] = []
-    for acc_id, task_id, item_name, date_completed in cur.fetchall():
-        month, day, year = date_completed.split("/")
-        completed.append(TaskCompletedRow(
-            int(acc_id),
-            int(task_id),
-            item_name,
-            datetime.date(
-                int(year),
-                int(month),
-                int(day)
-            )
-        ))
-    return completed
 
 
 def filter_by_acc_group_and_completed(group_name, acc_id) -> List[TaskCompletedRow]:
@@ -186,16 +167,48 @@ def filter_by_acc_group_and_completed(group_name, acc_id) -> List[TaskCompletedR
     return completed
 
 
+def get_all_completed_task_items() -> List[TaskItem]:
+    cur.execute("SELECT t.id, t.name, t.group_name, tc.item_name FROM tasks_completed AS tc "
+                "INNER JOIN tasks AS t ON t.id = tc.task_id")
+
+    completed: List[TaskItem] = []
+    for task_id, task_name, group_name, item_name in cur.fetchall():
+        completed.append(TaskItem(
+            int(task_id),
+            task_name,
+            group_name,
+            item_name
+        ))
+    return completed
+
+
+def filter_all_completed_task_items_by_group(group_name: str) -> List[TaskItem]:
+    cur.execute("SELECT t.id, t.name, t.group_name, tc.item_name FROM tasks_completed AS tc "
+                "INNER JOIN tasks AS t ON t.id = tc.task_id"
+                "WHERE t.group_name = ?", (group_name,))
+
+    completed: List[TaskItem] = []
+    for task_id, task_name, group_name, item_name in cur.fetchall():
+        completed.append(TaskItem(
+            int(task_id),
+            task_name,
+            group_name,
+            item_name
+        ))
+    return completed
+
+
 def get_all_task_items() -> List[TaskItem]:
     cur.execute("""
-SELECT t.name, t.group_name, items FROM tasks AS t 
+SELECT t.id, t.name, t.group_name, items FROM tasks AS t 
 INNER JOIN check_lists cl
     on cl.id = t.cl_id;""")
     task_items: List[TaskItem] = []
 
-    for name, group_name, items in cur.fetchall():
+    for task_id, name, group_name, items in cur.fetchall():
         for item in items.split(", "):
             task_items.append(TaskItem(
+                int(task_id),
                 name,
                 group_name,
                 item
@@ -204,19 +217,22 @@ INNER JOIN check_lists cl
     return task_items
 
 
-def get_all_completed_task_items() -> List[TaskItem]:
+def filter_all_task_items_by_group(group_name: str) -> List[TaskItem]:
     cur.execute("""
-SELECT t.name, t.group_name, tc.item_name FROM tasks_completed as tc
-INNER JOIN tasks t
-    on t.id = tc.task_id""")
+SELECT t.id, t.name, t.group_name, items FROM tasks AS t 
+INNER JOIN check_lists cl
+    on cl.id = t.cl_id
+WHERE t.group_name = ?;""", (group_name,))
     task_items: List[TaskItem] = []
 
-    for name, group_name, item in cur.fetchall():
-        task_items.append(TaskItem(
-            name,
-            group_name,
-            item
-        ))
+    for task_id, name, group_name, items in cur.fetchall():
+        for item in items.split(", "):
+            task_items.append(TaskItem(
+                int(task_id),
+                name,
+                group_name,
+                item
+            ))
 
     return task_items
 
@@ -227,9 +243,15 @@ def get_all_not_completed_task_items() -> List[TaskItem]:
     return list(all_tasks.difference(completed_tasks))
 
 
+def filter_all_not_completed_task_items_by_group(group_name: str) -> List[TaskItem]:
+    all_group_tasks = set(filter_all_task_items_by_group(group_name))
+    all_completed_group_tasks = set(filter_all_completed_task_items_by_group(group_name))
+    return list(all_group_tasks.difference(all_completed_group_tasks))
+
+
 def get_all_completed_tasks_by_name(name: str) -> List[TaskItem]:
     cur.execute(f"""
-SELECT t.name, t.group_name, tc.item_name FROM tasks_completed as tc
+SELECT t.id, t.name, t.group_name, tc.item_name FROM tasks_completed as tc
 INNER JOIN tasks t
     on t.id = tc.task_id
 INNER JOIN accounts a 
@@ -237,8 +259,9 @@ INNER JOIN accounts a
 WHERE a.name = '{name}'""")
     tasks_completed: List[TaskItem] = []
 
-    for task_name, group_name, item in cur.fetchall():
+    for task_id, task_name, group_name, item in cur.fetchall():
         tasks_completed.append(TaskItem(
+            int(task_id),
             task_name,
             group_name,
             item
@@ -253,7 +276,7 @@ def get_all_group_names() -> List[str]:
 
 
 def task_item_completed(task_item: TaskItem) -> bool:
-    return task_item in get_all_completed_tasks()
+    return task_item in get_all_completed_task_items()
 
 
 def insert_account(name: str):

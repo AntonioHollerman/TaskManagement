@@ -189,13 +189,13 @@ class TasksFrame(SubFrame):
         mode = self.filter.get()
 
         # Helper functions
-        def convert(task: TaskRow) -> FilteredRow:
+        def convert(task: TaskRow, items: List[str] = None) -> FilteredRow:
             return FilteredRow(
                 task.id,
                 task.name,
                 task.group_name,
                 task.bugged,
-                get_check_list(task.id).items
+                get_check_list(task.id).items if items is None else items
             )
 
         # Different modes -> ["Default", "Bugged", "Uncompleted", "I Completed"]
@@ -204,16 +204,29 @@ class TasksFrame(SubFrame):
         elif mode == "Bugged":
             filtered_tasks = [convert(task) for task in get_all_tasks_by_group_and_bugged(group_name)]
         elif mode == "Uncompleted":
-            for task in get_all_tasks_by_group(group_name):
-                task_converted = convert(task)
+            # Dictionary contain a task id to filtered items completed pairs
+            task_ids_dict = dict()
+            for uncompleted_task in filter_all_not_completed_task_items_by_group(group_name):
+                if uncompleted_task.task_id in task_ids_dict.keys():
+                    task_ids_dict[uncompleted_task.task_id].append(uncompleted_task.item_name)
+                else:
+                    task_ids_dict[uncompleted_task.task_id] = [uncompleted_task.item_name]
 
+            # Iterating over dictionary to convert pairs
+            filtered_tasks = [convert(get_task(task_id), completed_items) for task_id, completed_items in
+                              task_ids_dict.items()]
         elif mode == "I Completed":
+            # Dictionary contain a task id to filtered items completed pairs
             task_ids_dict = dict()
             for task_completed in filter_by_acc_group_and_completed(group_name, self.master.acc_id):
                 if task_completed.task_id in task_ids_dict.keys():
-                    task_ids_dict[task_completed.acc_id].append(task_completed.item_name)
+                    task_ids_dict[task_completed.task_id].append(task_completed.item_name)
                 else:
-                    task_ids_dict[task_completed.acc_id] = [task_completed.item_name]
+                    task_ids_dict[task_completed.task_id] = [task_completed.item_name]
+
+            # Iterating over dictionary to convert pairs
+            filtered_tasks = [convert(get_task(task_id), completed_items) for task_id, completed_items in
+                              task_ids_dict.items()]
         else:
             self.master.destroy()
             raise RuntimeError("Invalid mode passed")
@@ -273,7 +286,7 @@ class TasksFrame(SubFrame):
         for index, item_name in enumerate(get_check_list(task.items_filtered)):
             # Tracks if item is checked or un checked
             var = tk.StringVar()
-            var.set("Completed" if task_item_completed(TaskItem(task.name, task.group_name, item_name))
+            var.set("Completed" if task_item_completed(TaskItem(task.id, task.name, task.group_name, item_name))
                     else "Not Completed")
             var.trace("w", TasksFrame.box_value_changed(var, task.id, item_name))
             self.item_vars.append(var)

@@ -36,6 +36,7 @@ TaskCompletedRow = namedtuple("TaskCompletedRow", [
 ])
 
 TaskItem = namedtuple("TaskItem", [
+    "task_id",
     "task_name",
     "group_name",
     "item_name"
