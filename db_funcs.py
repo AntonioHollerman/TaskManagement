@@ -1,6 +1,6 @@
 import sqlite3 as sql
 from table_records import *
-from typing import List
+from typing import List, Set
 import datetime
 
 # Creates / Connect to database
@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS tasks_completed(
     FOREIGN KEY (acc_id) REFERENCES accounts(id),
     FOREIGN KEY (task_id) REFERENCES tasks(id)
 );""")
-    conn.commit()
 
 
 def get_all_accounts() -> List[AccountRow]:
@@ -243,6 +242,11 @@ def get_all_not_completed_task_items() -> List[TaskItem]:
     return list(all_tasks.difference(completed_tasks))
 
 
+def get_cl_id(cl_name):
+    cur.execute("SELECT id FROM check_lists WHERE name = ?", (cl_name,))
+    return cur.fetchone()[0]
+
+
 def filter_all_not_completed_task_items_by_group(group_name: str) -> List[TaskItem]:
     all_group_tasks = set(filter_all_task_items_by_group(group_name))
     all_completed_group_tasks = set(filter_all_completed_task_items_by_group(group_name))
@@ -284,55 +288,60 @@ def insert_account(name: str):
         "INSERT INTO accounts (name) "
         f"VALUES ('{name}')"
     )
-    conn.commit()
 
 
-def insert_cl(name: str, items: list):
+def insert_cl(name: str, items: Set[str]):
     cur.execute(
         "INSERT INTO check_lists (name, items) "
-        f"VALUES ('{name}', '{", ".join(items)}')"
+        f"VALUES (?, ?)",
+        (name, ", ".join(items))
     )
-    conn.commit()
-
+    
 
 def insert_task(cl_id: int, name: str, group_name: str, bugged: bool):
     cur.execute(
         "INSERT INTO tasks (cl_id, name, group_name, bugged) "
         f"VALUES ({cl_id}, '{name}', '{group_name}', '{bugged}')"
     )
-    conn.commit()
+    
+
+def update_bug_state(task_id: int, state: str):
+    assert state == "Bugged" or state == "Not Bugged"
+    cur.execute("UPDATE tasks SET bugged = ? WHERE id = ?", (state, task_id))
 
 
 def insert_completed_task(acc_id: int, task_id: int, item_name: str, date_completed: datetime.date):
     date_formatted = f"{date_completed.month:02d}/{date_completed.day:02d}/{date_completed.year}"
     cur.execute(
         "INSERT INTO tasks_completed (acc_id, task_id, item_name, date_completed) "
-        f"VALUES ({acc_id}, {task_id}, '{item_name}', '{date_formatted}')"
+        f"VALUES (?, ?, ?, ?)",
+        (acc_id, task_id, item_name, date_formatted)
     )
-    conn.commit()
 
 
 def delete_acc(acc_id: int):
     cur.execute(f"""
 DELETE FROM accounts
-WHERE id = {acc_id}""")
-    conn.commit()
+WHERE id = ?""",
+                (acc_id,))
 
 
 def delete_task(task_id: int):
     cur.execute(f"""
 DELETE FROM tasks
-WHERE id = {task_id}""")
-    conn.commit()
+WHERE id = ?""",
+                (task_id,))
 
 
 def delete_group(group_name: str):
     cur.execute(f"""
 DELETE FROM tasks
-WHERE group_name = '{group_name}' """)
+WHERE group_name = ? """,
+                (group_name,))
 
 
 def delete_completed_task_item(task_id: int, item_name: str):
     cur.execute(f"""
 DELETE FROM tasks_completed
-WHERE task_id = {task_id} AND item_name = '{item_name}'""")
+WHERE task_id = ? AND item_name = ?""",
+                (task_id, item_name))
