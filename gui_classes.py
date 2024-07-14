@@ -1,4 +1,3 @@
-import datetime
 import tkinter as tk
 from tkinter import ttk
 from db_funcs import *
@@ -23,6 +22,7 @@ class MasterWindow(ctk.CTk):
 
         # Initializing values
         self.active_frame: SubFrame = SignInFrame(self)
+        self.active_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.filter = "Default"
 
     def swap_frames(self, to_frame, **params):
@@ -59,8 +59,11 @@ class SubFrame(ttk.Frame):
 class SignInFrame(SubFrame):
     def __init__(self, master):
         super().__init__(master)
+
         # Frame title
-        ttk.Label(self, text="Sign In").grid(row=0, column=1)
+        self.logger = tk.StringVar()
+        self.logger.set("Sign In")
+        ttk.Label(self, textvariable=self.logger).grid(row=0, column=1)
         # Label for accounts
         ttk.Label(self, text="Accounts: ", anchor=tk.E).grid(row=1, column=0, sticky=tk.E)
 
@@ -92,8 +95,11 @@ class SignInFrame(SubFrame):
         self.master.swap_frames(NEW_ACCOUNT_FRAME)
 
     def select_acc(self):
-        self.master.current_acc = self.acc_selected.get()
-        self.master.swap_frames(TASKS_FRAME)
+        if not self.acc_selected.get() == "":
+            self.master.current_acc = self.acc_selected.get()
+            self.master.swap_frames(TASKS_FRAME)
+        else:
+            self.logger.set("Invalid Account Selected")
 
 
 class NewAccountFrame(SubFrame):
@@ -123,13 +129,15 @@ class NewAccountFrame(SubFrame):
     def add_acc(self):
         if self.acc_name.get() not in [acc.name for acc in get_all_accounts()]:
             insert_account(self.acc_name.get())
+            self.master.swap_frames(SIGN_IN_FRAME)
 
 
 class TasksFrame(SubFrame):
     def __init__(self, master):
-        filter_modes = ["Default", "Bugged", "Uncompleted", "I Completed"]
-        assert self.master.filter in filter_modes
         super().__init__(master)
+        filter_modes = ["Default", "Bugged", "Uncompleted", "I Completed"]
+        self.current_groups = get_all_group_names()
+        assert self.master.filter in filter_modes
 
         # Creating sub frames
         self.top_frame = ttk.Frame(self)
@@ -146,7 +154,9 @@ class TasksFrame(SubFrame):
         self.bottom_frame.pack(fill=tk.X, expand=True)
 
         # Populate Top Frame
-        ttk.Label(self.top_frame, text="Tasks", anchor=tk.CENTER).grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.logger = tk.StringVar()
+        self.logger.set("Tasks")
+        ttk.Label(self.top_frame, textvariable=self.logger, anchor=tk.CENTER).grid(row=0, column=0, columnspan=2, sticky="ew")
         ttk.Label(self.top_frame, text="Filter: ", anchor=tk.E).grid(row=1, column=0, sticky="e")
 
         self.tk_filter = tk.StringVar()
@@ -167,8 +177,8 @@ class TasksFrame(SubFrame):
         self.delete_buttons: List[ttk.Button] = []
         self.group_delete_buttons: List[ttk.Button] = []
 
-        for group_name in get_all_group_names():
-            self.create_group_frame(self.mid_frame, group_name).pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+        for group_name in self.current_groups:
+            self.create_group_frame(self.mid_frame, group_name).pack(fill=tk.BOTH, expand=True)
 
         # Populate Bottom Frame
         self.add_group_button = ttk.Button(self.bottom_frame, text="New Group", command=self.add_group)
@@ -229,10 +239,11 @@ class TasksFrame(SubFrame):
             raise RuntimeError("Invalid mode passed")
         return filtered_tasks
 
-    def create_group_frame(self, parent: ctk.CTkScrollableFrame, group_name: str) -> ttk.Frame:
+    def create_group_frame(self, parent: ctk.CTkScrollableFrame, group_name: str, empty_group: bool = False) \
+            -> ttk.Frame:
         # Filter tasks but setting
         filtered_tasks: List[FilteredRow] = self.filter_tasks(group_name)
-        if len(filtered_tasks) == 0:
+        if len(filtered_tasks) == 0 and not empty_group:
             return ttk.Frame(parent)
 
         # Creating master Frame
@@ -250,15 +261,16 @@ class TasksFrame(SubFrame):
         # Populate Top Frame
         ttk.Label(top_frame, text=group_name, anchor=tk.CENTER).grid(row=0, column=0, sticky=tk.EW)
         delete_button = ttk.Button(top_frame, text="DELETE",
-                                   command=TasksFrame.delete_group_frame(group_frame, group_name))
-        delete_button.grid(row=0, column=1, sticky=tk.W)
+                                   command=self.delete_group_frame(group_frame, group_name))
+        delete_button.grid(row=0, column=1, sticky=tk.E)
 
         # Populate Middle Frame
         for task in filtered_tasks:
-            self.create_task_frame(mid_frame, task).pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+            self.create_task_frame(mid_frame, task).pack(fill=tk.BOTH, expand=True)
 
         # Populate Bottom Frame
-        add_task_button = ttk.Button(bottom_frame, text="Add Task", )
+        add_task_button = ttk.Button(bottom_frame, text="Add Task", command=self.add_task(group_name))
+        add_task_button.grid(row=0, column=0)
         return group_frame
 
     def create_task_frame(self, parent: ttk.Frame, task: FilteredRow) -> ttk.Frame:
@@ -314,9 +326,9 @@ class TasksFrame(SubFrame):
         self.master.filter = self.tk_filter.get()
         self.master.swap_frames(TASKS_FRAME)
 
-    @staticmethod
-    def delete_group_frame(group_frame: ttk.Frame, group_name):
+    def delete_group_frame(self, group_frame: ttk.Frame, group_name):
         def to_return():
+            self.current_groups.remove(group_name)
             delete_group(group_name)
             group_frame.destroy()
         return to_return
@@ -336,15 +348,16 @@ class TasksFrame(SubFrame):
 
     def add_task(self, group_name: str):
         def to_return():
-            self.master.swap_frames(TASKS_FRAME, group_name=group_name)
+            self.master.swap_frames(NEW_TASK_FRAME, group_name=group_name)
         return to_return
 
     def add_group(self):
-        current_groups = get_all_group_names()
-        if self.group_name.get() not in current_groups:
-            self.create_group_frame(self.mid_frame, self.group_name.get())
+        if self.group_name.get() not in self.current_groups:
+            (self.create_group_frame(self.mid_frame, self.group_name.get(), True)
+             .pack(fill=tk.BOTH, expand=True))
+            self.current_groups.append(self.group_name.get())
         else:
-            self.group_name.set("Group already exist")
+            self.logger.set("Group already exist")
 
 
 class NewTaskFrame(SubFrame):
@@ -353,16 +366,18 @@ class NewTaskFrame(SubFrame):
         self.group_name = group_name
 
         # Creating labels
-        title_label = ttk.Label(self, text="Add Task", anchor=tk.CENTER)
+        self.logger = tk.StringVar()
+        self.logger.set("Add Task")
+        title_label = ttk.Label(self, textvariable=self.logger, anchor=tk.CENTER)
         title_label.grid(row=0, column=0, columnspan=3, sticky=tk.EW)
 
         sub_title = ttk.Label(self, text=f'Adding task to "{group_name}" group', anchor=tk.CENTER)
         sub_title.grid(row=1, column=0, columnspan=3, sticky=tk.EW)
 
-        check_list_label = ttk.Label(self, text="Check List: ", anchor=tk.RIGHT)
+        check_list_label = ttk.Label(self, text="Check List: ", anchor=tk.E)
         check_list_label.grid(row=2, column=1, sticky=tk.E)
 
-        task_name_label = ttk.Label(self, text="Task Name: ", anchor=tk.RIGHT)
+        task_name_label = ttk.Label(self, text="Task Name: ", anchor=tk.E)
         task_name_label.grid(row=3, column=1, sticky=tk.E)
 
         # Create entries
@@ -393,16 +408,19 @@ class NewTaskFrame(SubFrame):
         self.master.swap_frames(TASKS_FRAME)
 
     def create_cl(self):
-        pass
+        self.master.swap_frames(NEW_CHECKLIST_FRAME)
 
     def commit_task(self):
-        insert_task(
-            get_cl_id(self.cl_var.get()),
-            self.name_var.get(),
-            self.group_name,
-            False
-        )
-        self.master.swap_frames(TASKS_FRAME)
+        if self.name_var.get() != "":
+            insert_task(
+                get_cl_id(self.cl_var.get()),
+                self.name_var.get(),
+                self.group_name,
+                False
+            )
+            self.master.swap_frames(TASKS_FRAME)
+        else:
+            self.logger.set("Invalid Check List")
 
 
 class NewCheckListFrame(SubFrame):
@@ -419,7 +437,7 @@ class NewCheckListFrame(SubFrame):
         title_label = ttk.Label(self.top_frame, textvariable=self.logger, anchor=tk.CENTER)
         title_label.grid(row=0, column=0, columnspan=3, sticky=tk.EW)
 
-        name_label = ttk.Label(self.top_frame, text="Set Name: ", anchor=tk.RIGHT)
+        name_label = ttk.Label(self.top_frame, text="Set Name: ", anchor=tk.E)
         name_label.grid(row=1, column=0, columnspan=2, sticky=tk.E)
 
         list_label = ttk.Label(self.top_frame, text="List Items", anchor=tk.CENTER)
@@ -444,6 +462,11 @@ class NewCheckListFrame(SubFrame):
         self.add_item_button.grid(row=0, column=1)
         self.create_cl_button.grid(row=0, column=2, sticky=tk.W)
 
+        # Packing Frames
+        self.top_frame.pack(fill=tk.X, expand=True)
+        self.items_frame.pack(fill=tk.BOTH, expand=True)
+        self.bottom_from.pack(fill=tk.X, expand=True)
+
     def back(self):
         self.master.swap_frames(NEW_TASK_FRAME)
 
@@ -456,7 +479,7 @@ class NewCheckListFrame(SubFrame):
         delete_button.grid(row=0, column=0, sticky=tk.E)
 
         # Label
-        ttk.Label(item_frame, text="Item Name: ", anchor=tk.RIGHT).grid(row=0, column=1, sticky=tk.E)
+        ttk.Label(item_frame, text="Item Name: ", anchor=tk.E).grid(row=0, column=1, sticky=tk.E)
 
         # Name Entry
         name_var = tk.StringVar()
