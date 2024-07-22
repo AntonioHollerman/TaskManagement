@@ -25,6 +25,9 @@ class MasterWindow(ctk.CTk):
         self.active_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.filter = "Default"
 
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
     def swap_frames(self, to_frame, **params):
         if to_frame == SIGN_IN_FRAME:
             self.active_frame.destroy()
@@ -122,6 +125,14 @@ class NewAccountFrame(SubFrame):
 
         self.add_button = ttk.Button(self, text="Add", command=self.add_acc)
         self.add_button.grid(row=2, column=1, sticky=tk.E)
+
+        # Adding weights
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
+
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
 
     def back(self):
         self.master.swap_frames(SIGN_IN_FRAME)
@@ -259,10 +270,14 @@ class TasksFrame(SubFrame):
         bottom_frame.pack(fill=tk.X, expand=True)
 
         # Populate Top Frame
-        ttk.Label(top_frame, text=group_name, anchor=tk.CENTER).grid(row=0, column=0, sticky=tk.EW)
+        ttk.Label(top_frame, text=group_name, anchor=tk.CENTER).grid(row=0, column=0, sticky=tk.W)
         delete_button = ttk.Button(top_frame, text="DELETE",
                                    command=self.delete_group_frame(group_frame, group_name))
         delete_button.grid(row=0, column=1, sticky=tk.E)
+
+        top_frame.rowconfigure(0, weight=1)
+        top_frame.columnconfigure(0, weight=1)
+        top_frame.columnconfigure(0, weight=1)
 
         # Populate Middle Frame
         for task in filtered_tasks:
@@ -271,6 +286,9 @@ class TasksFrame(SubFrame):
         # Populate Bottom Frame
         add_task_button = ttk.Button(bottom_frame, text="Add Task", command=self.add_task(group_name))
         add_task_button.grid(row=0, column=0)
+
+        bottom_frame.rowconfigure(0, weight=1)
+        bottom_frame.columnconfigure(0, weight=1)
         return group_frame
 
     def create_task_frame(self, parent: ttk.Frame, task: FilteredRow) -> ttk.Frame:
@@ -297,6 +315,13 @@ class TasksFrame(SubFrame):
         bugged_box.grid(row=1, column=1, sticky="nw")
         self.bugged_check_boxes.append(bugged_box)
 
+        # Creating Weights
+        task_frame.rowconfigure(0, weight=1)
+        task_frame.rowconfigure(1, weight=1)
+
+        task_frame.columnconfigure(0, weight=1)
+        task_frame.columnconfigure(1, weight=1)
+
         # Looping through items for each task
         for index, item_name in enumerate(get_check_list(task.items_filtered)):
             # Tracks if item is checked or un checked
@@ -310,6 +335,7 @@ class TasksFrame(SubFrame):
             check_box = ttk.Checkbutton(task_frame, variable=var, text=item_name, onvalue="Completed",
                                         offvalue="Not Completed")
             check_box.grid(row=2+index, column=1, sticky="nw")
+            task_frame.rowconfigure(2+index, weight=1)
             self.check_boxes.append(check_box)
 
         return task_frame
@@ -404,6 +430,18 @@ class NewTaskFrame(SubFrame):
         self.new_cl_button.grid(row=5, column=1)
         self.add_task_button.grid(row=5, column=2, sticky=tk.E)
 
+        # Adding weights
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
+        self.rowconfigure(3, weight=1)
+        self.rowconfigure(4, weight=1)
+        self.rowconfigure(5, weight=1)
+
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
+
     def back(self):
         self.master.swap_frames(TASKS_FRAME)
 
@@ -466,6 +504,13 @@ class NewCheckListFrame(SubFrame):
         self.top_frame.pack(fill=tk.X, expand=True)
         self.items_frame.pack(fill=tk.BOTH, expand=True)
         self.bottom_from.pack(fill=tk.X, expand=True)
+
+        # Adding weights
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
+
+        self.columnconfigure(0, weight=1)
 
     def back(self):
         self.master.swap_frames(NEW_TASK_FRAME)
